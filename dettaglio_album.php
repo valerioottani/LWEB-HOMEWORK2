@@ -1,0 +1,243 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once 'connection.php';
+
+$is_logged = isset($_SESSION['user']);
+$username_corrente = $is_logged ? $_SESSION['user'] : '';
+$messaggio = '';
+$errore = '';
+
+$id_album = isset($_GET['id']) ? (int)$_GET['id'] : 1;
+
+// Gestione dell'acquisto del merchandise e salvataggio nel database
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merch_id'])) {
+    if (!$is_logged) {
+        header('Location: login.php');
+        exit();
+    }
+
+    $merchandise_id = (int)$_POST['merch_id'];
+
+    // 🔒 CONTROLLO DI SICUREZZA LATO SERVER: Verifica se il prodotto è veramente disponibile
+    $stmt_chk = $conn->prepare("SELECT disponibile FROM `merchandise_album` WHERE id = ?");
+    $stmt_chk->bind_param("i", $merchandise_id);
+    $stmt_chk->execute();
+    $res_chk = $stmt_chk->get_result()->fetch_assoc();
+    $stmt_chk->close();
+
+    if (!$res_chk || $res_chk['disponibile'] == 0) {
+        $errore = "Operazione bloccata: questo prodotto è esaurito (SOLD OUT) e non può essere acquistato.";
+    } else {
+        // 1. Recupero dell'indirizzo registrato nel profilo dell'utente
+        $stmt_ind = $conn->prepare("SELECT indirizzo FROM `" . TAB_USERS . "` WHERE username = ?");
+        $stmt_ind->bind_param("s", $username_corrente);
+        $stmt_ind->execute();
+        $res_ind = $stmt_ind->get_result();
+        $user_data = $res_ind->fetch_assoc();
+        $stmt_ind->close();
+
+        $indirizzo_utente = (!empty($user_data['indirizzo'])) 
+            ? $user_data['indirizzo'] 
+            : 'Indirizzo non specificato (aggiorna il tuo profilo per inserirlo)';
+
+        // 2. Registrazione dell'acquisto nel database
+        $stmt_acq = $conn->prepare("INSERT INTO `acquisti_merch` (username, merchandise_id) VALUES (?, ?)");
+        if ($stmt_acq) {
+            $stmt_acq->bind_param("si", $username_corrente, $merchandise_id);
+            if ($stmt_acq->execute()) {
+                // Messaggio di conferma con indirizzo di spedizione e link diretto allo storico
+                $messaggio = "Ordine completato con successo! Il prodotto verrà spedito all'indirizzo scelto dall'utente: <strong>" . htmlspecialchars($indirizzo_utente) . "</strong>.<br /><br /><a href='discografia.php' style='color: #ffffff; font-weight: bold; text-decoration: underline;'>Visualizza Storico Acquisti</a>";
+            } else {
+                $errore = "Errore durante la registrazione dell'acquisto nel database.";
+            }
+            $stmt_acq->close();
+        } else {
+            $errore = "Errore di connessione al database.";
+        }
+    }
+}
+
+// Recupero dati dell'album e dell'artista
+$res_alb = $conn->query("SELECT a.*, art.nome AS artista FROM `" . TAB_ALBUMS . "` a JOIN `" . TAB_ARTISTS . "` art ON a.artista_id = art.id WHERE a.id = $id_album");
+if ($res_alb && $res_alb->num_rows > 0) {
+    $album = $res_alb->fetch_assoc();
+    
+    // Controllo sicuro del testo personalizzato salvato dal pannello admin
+    $testo_curiosita = '';
+    if (!empty($album['curiosita'])) {
+        $testo_curiosita = $album['curiosita'];
+    } elseif (!empty($album['descrizione'])) {
+        $testo_curiosita = $album['descrizione'];
+    }
+} else {
+    die("Album non trovato.");
+}
+
+// Recupero del merchandise collegato all'album
+$res_merch = $conn->query("SELECT * FROM `merchandise_album` WHERE album_id = $id_album");
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="it" lang="it">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Spotify - Shop & Album: <?php echo htmlspecialchars($album['titolo']); ?></title>
+    <style type="text/css">
+        .spotify-card {
+            background-color: #181818;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .spotify-card:hover {
+            transform: translateY(-4px);
+            background-color: #222222;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+        }
+        .buy-btn {
+            background-color: #1db954;
+            color: #000000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 500px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .buy-btn:hover {
+            background-color: #1ed760;
+            transform: scale(1.03);
+        }
+        .soldout-btn {
+            background-color: #333333;
+            color: #888888;
+            padding: 10px 20px;
+            border-radius: 500px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: default !important;
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            user-select: none;
+        }
+    </style>
+</head>
+<body style="background: linear-gradient(180deg, #1f1f1f 0%, #121212 40%, #0a0a0a 100%); background-attachment: fixed; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; min-height: 100vh;">
+
+    <?php include 'menu.php'; ?>
+
+    <div style="margin-left: 230px; padding: 32px; max-width: 1100px; box-sizing: border-box;">
+        
+        <!-- Banner Messaggio Conferma / Errore -->
+        <?php if (!empty($messaggio)): ?>
+            <div style="background-color: rgba(29,185,84,0.15); border: 1px solid #1db954; color: #1db954; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px; font-size: 13px; line-height: 1.5;">
+                <?php echo $messaggio; ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($errore)): ?>
+            <div style="background-color: rgba(226,33,52,0.15); border: 1px solid #e22134; color: #e22134; padding: 14px 18px; border-radius: 8px; margin-bottom: 24px; font-size: 13px;">
+                <?php echo htmlspecialchars($errore); ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Intestazione Principale Album -->
+        <div style="display: flex; align-items: center; gap: 32px; background-color: #181818; padding: 32px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 36px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+            <img src="img/<?php echo htmlspecialchars($album['copertina']); ?>" alt="" style="width: 180px; height: 180px; border-radius: 8px; object-fit: cover; box-shadow: 0 6px 16px rgba(0,0,0,0.6);" />
+            <div>
+                <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #1db954; letter-spacing: 1px;">Album Ufficiale & Store</span>
+                <h1 style="font-size: 36px; font-weight: 900; margin: 8px 0; color: #ffffff;"><?php echo htmlspecialchars($album['titolo']); ?></h1>
+                <p style="font-size: 16px; color: #b3b3b3; margin: 0 0 8px 0; font-weight: bold;"><?php echo htmlspecialchars($album['artista']); ?></p>
+                <p style="font-size: 13px; color: #888888; margin: 0;">Anno di pubblicazione: <?php echo htmlspecialchars($album['anno']); ?></p>
+            </div>
+        </div>
+
+        <!-- Sezione Merchandise Ufficiale, Vinili e CD -->
+        <h2 style="font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #ffffff;">Merchandise Ufficiale, Vinili & CD</h2>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 40px;">
+            <?php if ($res_merch && $res_merch->num_rows > 0): ?>
+                <?php while ($prod = $res_merch->fetch_assoc()): ?>
+                    <?php 
+                        $is_soldout = (isset($prod['disponibile']) && $prod['disponibile'] == 0);
+                        $opacity_style = $is_soldout ? 'opacity: 0.7;' : '';
+                    ?>
+                    <div class="spotify-card" style="width: 230px; padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; position: relative; <?php echo $opacity_style; ?>">
+                        
+                        <div>
+                            <div style="display: flex; justify-content: center; align-items: center; height: 140px; margin-bottom: 14px;">
+                                <?php 
+                                    $img_filename = isset($prod['immagine_prodotto']) ? $prod['immagine_prodotto'] : '';
+                                    $img_path = 'img/' . $img_filename;
+                                    
+                                    if (!$is_soldout && !empty($img_filename) && file_exists($img_path)): 
+                                ?>
+                                    <img src="img/<?php echo htmlspecialchars($img_filename); ?>" alt="" style="max-width: 130px; max-height: 130px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.6));" />
+                                <?php else: ?>
+                                    <div style="width: 100%; height: 130px; background-color: #202020; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1px dashed #444444;">
+                                        <span style="color: #e91429; font-weight: 900; font-size: 14px; letter-spacing: 2px; text-transform: uppercase;">SOLD OUT</span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <p style="font-size: 14px; font-weight: bold; margin: 0 0 8px 0; color: #ffffff;"><?php echo htmlspecialchars($prod['tipo_prodotto']); ?></p>
+                            <p style="font-size: 16px; font-weight: 900; color: #1db954; margin: 0 0 16px 0;">€ <?php echo number_format($prod['prezzo'], 2, ',', '.'); ?></p>
+                        </div>
+
+                        <?php if (!$is_soldout): ?>
+                            <?php if ($is_logged): ?>
+                                <form action="dettaglio_album.php?id=<?php echo $id_album; ?>" method="POST" style="margin: 0;">
+                                    <input type="hidden" name="merch_id" value="<?php echo (int)$prod['id']; ?>" />
+                                    <button type="submit" class="buy-btn">Acquista Ora</button>
+                                </form>
+                            <?php else: ?>
+                                <a href="login.php" class="buy-btn" style="text-align: center;">Accedi per comprare</a>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <div class="soldout-btn">Esaurito</div>
+                        <?php endif; ?>
+
+                    </div>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <div class="spotify-card" style="padding: 24px; width: 100%; box-sizing: border-box;">
+                    <p style="color: #b3b3b3; font-size: 14px; margin: 0; text-align: center;">Nessun articolo fisico disponibile per questo album al momento.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Curiosità & Note di Produzione (Dinamiche con fallback predefinito) -->
+        <h2 style="font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #ffffff;">Curiosità & Note di Produzione</h2>
+        <div style="background-color: #181818; padding: 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 30px; color: #b3b3b3; font-size: 14px; line-height: 1.6;">
+            <?php if (!empty($testo_curiosita)): ?>
+                <?php echo nl2br(htmlspecialchars($testo_curiosita)); ?>
+            <?php else: ?>
+                <p style="margin-top: 0; color: #ffffff; font-weight: bold; font-size: 15px;">Il Concept e la Realizzazione</p>
+                <p style="margin-bottom: 16px;">Questo progetto discografico rappresenta una pietra miliare nel percorso artistico di <strong><?php echo htmlspecialchars($album['artista']); ?></strong>. Registrato tra i migliori studi di produzione nazionali ed europei, l'album unisce sonorità urban contemporanee a testi ricercati e di forte impatto narrativo, definendo una nuova identità sonora per l'artista.</p>
+                
+                <p style="margin: 0 0 6px 0; color: #ffffff; font-weight: bold; font-size: 15px;">Impatto e Certificazioni</p>
+                <p style="margin: 0;">Fin dal suo debutto nell'anno <strong><?php echo htmlspecialchars($album['anno']); ?></strong>, l'album <em><?php echo htmlspecialchars($album['titolo']); ?></em> ha scalato vertiginosamente le classifiche ufficiali FIMI e le Top Charts streaming, accumulando certificazioni di vendite e milioni di ascolti complessivi tra radio e piattaforme digitali.</p>
+            <?php endif; ?>
+        </div>
+
+        <!-- Link per tornare alla discografia -->
+        <div>
+            <a href="discografia.php" style="color: #1db954; text-decoration: none; font-size: 13px; font-weight: bold; cursor: pointer;">← Torna alla Discografia</a>
+        </div>
+
+    </div>
+
+</body>
+</html>
+<?php 
+if (isset($conn) && !$conn->connect_error) {
+    $conn->close(); 
+}
+?>
