@@ -13,7 +13,7 @@ if (!isset($_SESSION['user']) || !isset($_SESSION['ruolo']) || $_SESSION['ruolo'
 $messaggio = '';
 $errore = '';
 
-// Assicuriamoci che la tabella stazioni_radio esista nel database
+// Assicuriamoci che la tabella stazioni_radio esista
 $conn->query("CREATE TABLE IF NOT EXISTS `stazioni_radio` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `nome` VARCHAR(150) NOT NULL,
@@ -22,12 +22,34 @@ $conn->query("CREATE TABLE IF NOT EXISTS `stazioni_radio` (
     `sfondo_css` VARCHAR(255) NOT NULL DEFAULT 'linear-gradient(135deg, #1e3264 0%, #000000 100%)'
 )");
 
+// Elenco delle 5 stazioni radio originali da verificare e ripristinare se mancanti
+$stazioni_default = [
+    ['Luchè Radio', 'Con Geolier, Guè, Marracash e molti altri', 'primo_piano.png', 'linear-gradient(135deg, #1e3264 0%, #000000 100%)'],
+    ['Geolier Radio', 'Con Luchè, Lazza, Sfera Ebbasta e altri', 'geolier.jpg', 'linear-gradient(135deg, #8d67ab 0%, #000000 100%)'],
+    ['Marracash Radio', 'Con Guè, Fabri Fibra, Salmo e altri', 'marra.jpg', 'linear-gradient(135deg, #e8115b 0%, #000000 100%)'],
+    ['Lazza Radio', 'Con Sfera Ebbasta, Shiva, Tedua e altri', 'lazza.jpg', 'linear-gradient(135deg, #148a08 0%, #000000 100%)'],
+    ['Guè Radio', 'Con Club Dogo, Marracash, Noyz Narcos e altri', 'gue.jpg', 'linear-gradient(135deg, #e91429 0%, #000000 100%)']
+];
+
+foreach ($stazioni_default as $stazione) {
+    $nome_stazione = $stazione[0];
+    $check = $conn->query("SELECT id FROM `stazioni_radio` WHERE nome = '" . $conn->real_escape_string($nome_stazione) . "'");
+    if ($check && $check->num_rows == 0) {
+        $stmt_ins_def = $conn->prepare("INSERT INTO `stazioni_radio` (nome, artisti, immagine, sfondo_css) VALUES (?, ?, ?, ?)");
+        if ($stmt_ins_def) {
+            $stmt_ins_def->bind_param("ssss", $stazione[0], $stazione[1], $stazione[2], $stazione[3]);
+            $stmt_ins_def->execute();
+            $stmt_ins_def->close();
+        }
+    }
+}
+
 // 1. GESTIONE AGGIUNTA DI UNA NUOVA STAZIONE RADIO
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azione']) && $_POST['azione'] === 'aggiungi') {
     $nome = trim($_POST['nome']);
     $artisti = trim($_POST['artisti']);
     $immagine = trim($_POST['immagine']);
-    $sfondo_css = trim($_POST['sfondo_css']);
+    $sfondo_css = 'linear-gradient(135deg, #1e3264 0%, #000000 100%)';
 
     if (!empty($nome)) {
         $stmt_ins = $conn->prepare("INSERT INTO `stazioni_radio` (nome, artisti, immagine, sfondo_css) VALUES (?, ?, ?, ?)");
@@ -66,12 +88,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azione']) && $_POST['
     $nome = trim($_POST['nome']);
     $artisti = trim($_POST['artisti']);
     $immagine = trim($_POST['immagine']);
-    $sfondo_css = trim($_POST['sfondo_css']);
 
     if (!empty($nome)) {
-        $stmt_upd = $conn->prepare("UPDATE `stazioni_radio` SET nome = ?, artisti = ?, immagine = ?, sfondo_css = ? WHERE id = ?");
+        $stmt_upd = $conn->prepare("UPDATE `stazioni_radio` SET nome = ?, artisti = ?, immagine = ? WHERE id = ?");
         if ($stmt_upd) {
-            $stmt_upd->bind_param("ssssi", $nome, $artisti, $immagine, $sfondo_css, $id_mod);
+            $stmt_upd->bind_param("sssi", $nome, $artisti, $immagine, $id_mod);
             if ($stmt_upd->execute()) {
                 $messaggio = "Stazione radio aggiornata con successo!";
             } else {
@@ -172,10 +193,6 @@ $res_stazioni = $conn->query("SELECT * FROM `stazioni_radio` ORDER BY id ASC");
                     <input type="text" name="immagine" value="primo_piano.png" class="form-input" />
                 </div>
                 <div>
-                    <label style="font-size: 11px; color: #b3b3b3; display: block; margin-bottom: 4px;">Sfondo CSS</label>
-                    <input type="text" name="sfondo_css" value="linear-gradient(135deg, #1e3264 0%, #000000 100%)" class="form-input" />
-                </div>
-                <div>
                     <button type="submit" class="btn-green">Crea Stazione</button>
                 </div>
             </form>
@@ -186,7 +203,6 @@ $res_stazioni = $conn->query("SELECT * FROM `stazioni_radio` ORDER BY id ASC");
         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; background-color: #181818; border-radius: 8px; overflow: hidden;">
             <thead>
                 <tr style="border-bottom: 1px solid #333; color: #b3b3b3; font-size: 11px; text-transform: uppercase;">
-                    <th style="padding: 12px;">ID</th>
                     <th style="padding: 12px;">Nome</th>
                     <th style="padding: 12px;">Artisti</th>
                     <th style="padding: 12px;">Immagine</th>
@@ -200,17 +216,15 @@ $res_stazioni = $conn->query("SELECT * FROM `stazioni_radio` ORDER BY id ASC");
                             <form action="gestione_stazioni.php" method="POST">
                                 <input type="hidden" name="azione" value="modifica" />
                                 <input type="hidden" name="stazione_id" value="<?php echo $stazione['id']; ?>" />
-                                <input type="hidden" name="sfondo_css" value="<?php echo htmlspecialchars($stazione['sfondo_css']); ?>" />
                                 
-                                <td style="padding: 14px; color: #888;"><?php echo $stazione['id']; ?></td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="nome" value="<?php echo htmlspecialchars($stazione['nome']); ?>" class="form-input" style="width: 150px; font-weight: bold;" required="required" />
+                                    <input type="text" name="nome" value="<?php echo htmlspecialchars($stazione['nome']); ?>" class="form-input" style="width: 180px; font-weight: bold;" required="required" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="artisti" value="<?php echo htmlspecialchars($stazione['artisti']); ?>" class="form-input" style="width: 300px;" />
+                                    <input type="text" name="artisti" value="<?php echo htmlspecialchars($stazione['artisti']); ?>" class="form-input" style="width: 400px;" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="immagine" value="<?php echo htmlspecialchars($stazione['immagine']); ?>" class="form-input" style="width: 130px;" />
+                                    <input type="text" name="immagine" value="<?php echo htmlspecialchars($stazione['immagine']); ?>" class="form-input" style="width: 150px;" />
                                 </td>
                                 <td style="padding: 14px; text-align: center; white-space: nowrap;">
                                     <button type="submit" class="btn-green" style="padding: 6px 14px; margin-right: 6px;">Salva</button>
@@ -221,7 +235,7 @@ $res_stazioni = $conn->query("SELECT * FROM `stazioni_radio` ORDER BY id ASC");
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="5" style="padding: 20px; text-align: center; color: #888;">Nessuna stazione radio trovata.</td>
+                        <td colspan="4" style="padding: 20px; text-align: center; color: #888;">Nessuna stazione radio trovata.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

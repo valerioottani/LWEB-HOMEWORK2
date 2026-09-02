@@ -175,7 +175,6 @@ $res_artisti = $conn->query("SELECT * FROM `" . TAB_ARTISTS . "` ORDER BY id ASC
         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; background-color: #181818; border-radius: 8px; overflow: hidden;">
             <thead>
                 <tr style="border-bottom: 1px solid #333; color: #b3b3b3; font-size: 11px; text-transform: uppercase;">
-                    <th style="padding: 12px;">ID</th>
                     <th style="padding: 12px;">Nome</th>
                     <th style="padding: 12px;">Biografia</th>
                     <th style="padding: 12px;">Immagine</th>
@@ -190,15 +189,14 @@ $res_artisti = $conn->query("SELECT * FROM `" . TAB_ARTISTS . "` ORDER BY id ASC
                                 <input type="hidden" name="azione" value="modifica" />
                                 <input type="hidden" name="artista_id" value="<?php echo $art['id']; ?>" />
                                 
-                                <td style="padding: 14px; color: #888;"><?php echo $art['id']; ?></td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="nome" value="<?php echo htmlspecialchars($art['nome']); ?>" class="form-input" style="width: 160px; font-weight: bold;" required="required" />
+                                    <input type="text" name="nome" value="<?php echo htmlspecialchars($art['nome']); ?>" class="form-input" style="width: 180px; font-weight: bold;" required="required" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="biografia" value="<?php echo htmlspecialchars(isset($art['biografia']) ? $art['biografia'] : ''); ?>" class="form-input" style="width: 300px;" />
+                                    <input type="text" name="biografia" value="<?php echo htmlspecialchars(isset($art['biografia']) ? $art['biografia'] : ''); ?>" class="form-input" style="width: 350px;" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="immagine" value="<?php echo htmlspecialchars($art['immagine']); ?>" class="form-input" style="width: 120px;" />
+                                    <input type="text" name="immagine" value="<?php echo htmlspecialchars($art['immagine']); ?>" class="form-input" style="width: 130px;" />
                                 </td>
                                 <td style="padding: 14px; text-align: center; white-space: nowrap;">
                                     <button type="submit" class="btn-green" style="padding: 6px 14px; margin-right: 6px;">Salva</button>
@@ -209,7 +207,7 @@ $res_artisti = $conn->query("SELECT * FROM `" . TAB_ARTISTS . "` ORDER BY id ASC
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="5" style="padding: 20px; text-align: center; color: #888;">Nessun artista trovato.</td>
+                        <td colspan="4" style="padding: 20px; text-align: center; color: #888;">Nessun artista trovato.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

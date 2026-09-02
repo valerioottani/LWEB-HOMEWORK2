@@ -4,6 +4,12 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once 'connection.php';
 
+if (!isset($_SESSION['user'])) {
+    header('Location: login.php');
+    exit();
+}
+
+$username_corrente = $_SESSION['user'];
 $evento_id = isset($_GET['id']) ? (int)$_GET['id'] : 1;
 
 // Recupero dati evento
@@ -14,14 +20,18 @@ if ($res_ev && $res_ev->num_rows > 0) {
     die("Evento non trovato.");
 }
 
-// Gestione aggiunta posto al carrello
+// Gestione aggiunta posto al carrello e associazione dell'username all'acquisto del biglietto
 $messaggio = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $posto_id = isset($_POST['posto_id']) ? (int)$_POST['posto_id'] : 0;
     
     $res_p = $conn->query("SELECT * FROM `posti_evento` WHERE id = $posto_id AND occupato = 0");
     if ($res_p && $posto = $res_p->fetch_assoc()) {
-        $conn->query("UPDATE `posti_evento` SET occupato = 1 WHERE id = $posto_id");
+        // Aggiorniamo il posto segnandolo come occupato e salvando l'username dell'acquirente per lo storico
+        $stmt_occ = $conn->prepare("UPDATE `posti_evento` SET occupato = 1, username = ? WHERE id = ?");
+        $stmt_occ->bind_param("si", $username_corrente, $posto_id);
+        $stmt_occ->execute();
+        $stmt_occ->close();
 
         if (!isset($_SESSION['carrello'])) {
             $_SESSION['carrello'] = [];

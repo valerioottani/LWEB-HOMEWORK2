@@ -10,7 +10,7 @@ $messaggio = '';
 
 $album_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// Gestione acquisto merchandise da questa pagina
+// Gestione dell'acquisto diretto del merchandise associato all'album
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azione']) && $_POST['azione'] === 'acquista_merch') {
     if (!$is_logged) {
         header('Location: login.php');
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azione']) && $_POST['
     }
 }
 
-// Recupero dati dell'album e dell'artista
+// Recupera le informazioni generali dell'album e dell'artista corrispondente
 $stmt_alb = $conn->prepare("SELECT a.id, a.titolo, a.anno, a.copertina, art.nome AS artista FROM `" . TAB_ALBUMS . "` a JOIN `" . TAB_ARTISTS . "` art ON a.artista_id = art.id WHERE a.id = ?");
 $stmt_alb->bind_param("i", $album_id);
 $stmt_alb->execute();
@@ -43,13 +43,13 @@ if (!$album) {
     exit();
 }
 
-// Recupero tracce dell'album
+// Estrae l'elenco delle tracce musicali appartenenti all'album
 $res_tracce = $conn->query("SELECT * FROM `" . TAB_TRACKS . "` WHERE album_id = $album_id");
 
-// Recupero merchandise dell'album
+// Estrae i prodotti di merchandise disponibili per l'album selezionato
 $res_merch = $conn->query("SELECT * FROM `merchandise_album` WHERE album_id = $album_id");
 
-// Recupero storico acquisti utente per la colonna di destra
+// Recupera lo storico degli acquisti effettuati dall'utente loggato da mostrare nella barra laterale
 $storico_acquisti = [];
 if ($is_logged) {
     $stmt_st = $conn->prepare("

@@ -13,29 +13,12 @@ $res_albums = $conn->query("SELECT a.id, a.titolo AS album, a.anno, a.copertina,
                             FROM `" . TAB_ALBUMS . "` a 
                             JOIN `" . TAB_ARTISTS . "` art ON a.artista_id = art.id 
                             ORDER BY a.anno DESC, a.id DESC");
-
-// 2. Recupero dello storico acquisti merchandise dell'utente loggato
-$res_acquisti = null;
-if ($is_logged) {
-    $stmt_acq = $conn->prepare("SELECT acq.data_acquisto, m.tipo_prodotto, m.prezzo, m.immagine_prodotto, alb.titolo AS album_titolo 
-                                FROM `acquisti_merch` acq 
-                                JOIN `merchandise_album` m ON acq.merchandise_id = m.id 
-                                JOIN `" . TAB_ALBUMS . "` alb ON m.album_id = alb.id 
-                                WHERE acq.username = ? 
-                                ORDER BY acq.data_acquisto DESC");
-    if ($stmt_acq) {
-        $stmt_acq->bind_param("s", $username_corrente);
-        $stmt_acq->execute();
-        $res_acquisti = $stmt_acq->get_result();
-        $stmt_acq->close();
-    }
-}
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="it" lang="it">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>Spotify - Discografia & Storico Acquisti</title>
+    <title>Spotify - Discografia</title>
     <style type="text/css">
         .spotify-card {
             background-color: #181818;
@@ -67,17 +50,6 @@ if ($is_logged) {
         }
         .admin-link-btn:hover {
             background-color: #1ed760;
-        }
-        /* Effetto in rilievo al passaggio del cursore sulle righe dello storico */
-        .acq-row {
-            transition: background-color 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .acq-row:hover {
-            background-color: #2a2a2a !important;
-            transform: scale(1.01);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-            position: relative;
-            z-index: 2;
         }
     </style>
 </head>
@@ -115,44 +87,6 @@ if ($is_logged) {
                 <p style="color: #888; font-size: 14px;">Nessun album trovato nel catalogo.</p>
             <?php endif; ?>
         </div>
-
-        <!-- SEZIONE STORICO ACQUISTI MERCHANDISE -->
-        <?php if ($is_logged): ?>
-            <div style="margin-top: 50px; margin-bottom: 40px;">
-                <h2 style="font-size: 22px; font-weight: bold; margin-bottom: 16px; color: #ffffff;"> Storico Acquisti Merchandise</h2>
-                
-                <div style="background-color: #181818; border-radius: 8px; padding: 20px; border: 1px solid rgba(255,255,255,0.05);">
-                    <?php if ($res_acquisti && $res_acquisti->num_rows > 0): ?>
-                        <table style="width: 100%; border-collapse: separate; border-spacing: 0 6px; text-align: left; font-size: 14px;">
-                            <thead>
-                                <tr style="color: #b3b3b3; font-size: 11px; text-transform: uppercase;">
-                                    <th style="padding: 10px; width: 60px;">Prodotto</th>
-                                    <th style="padding: 10px;">Articolo / Tipologia</th>
-                                    <th style="padding: 10px;">Album Collegato</th>
-                                    <th style="padding: 10px;">Data Ordine</th>
-                                    <th style="padding: 10px; text-align: right;">Prezzo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php while ($acq = $res_acquisti->fetch_assoc()): ?>
-                                    <tr class="acq-row" style="background-color: #202020; border-radius: 6px;">
-                                        <td style="padding: 12px 10px; border-top-left-radius: 6px; border-bottom-left-radius: 6px;">
-                                            <img src="img/<?php echo htmlspecialchars($acq['immagine_prodotto']); ?>" alt="" style="width: 40px; height: 40px; border-radius: 4px; object-fit: contain; background-color: #222;" />
-                                        </td>
-                                        <td style="padding: 12px 10px; font-weight: bold; color: #ffffff;"><?php echo htmlspecialchars($acq['tipo_prodotto']); ?></td>
-                                        <td style="padding: 12px 10px; color: #b3b3b3;"><?php echo htmlspecialchars($acq['album_titolo']); ?></td>
-                                        <td style="padding: 12px 10px; color: #888888; font-size: 13px;"><?php echo htmlspecialchars($acq['data_acquisto']); ?></td>
-                                        <td style="padding: 12px 10px; text-align: right; font-weight: bold; color: #1db954; border-top-right-radius: 6px; border-bottom-right-radius: 6px;">€ <?php echo number_format($acq['prezzo'], 2, ',', '.'); ?></td>
-                                    </tr>
-                                <?php endwhile; ?>
-                            </tbody>
-                        </table>
-                    <?php else: ?>
-                        <p style="color: #b3b3b3; font-size: 14px; margin: 0; text-align: center; padding: 10px;">Non hai ancora effettuato alcun acquisto di merchandise. Visita la pagina di un album per comprare vinili, CD o felpe!</p>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endif; ?>
 
         <div>
             <a href="homepage.php" style="color: #1db954; text-decoration: none; font-size: 13px; font-weight: bold;">← Torna alla Homepage</a>

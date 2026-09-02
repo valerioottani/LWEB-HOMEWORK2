@@ -19,6 +19,7 @@ $conn->query("DROP TABLE IF EXISTS `merchandise_album`");
 $conn->query("DROP TABLE IF EXISTS `messaggi_community`");
 $conn->query("DROP TABLE IF EXISTS `playlist_tracce`");
 $conn->query("DROP TABLE IF EXISTS `playlist`");
+$conn->query("DROP TABLE IF EXISTS `stazioni_radio`");
 $conn->query("DROP TABLE IF EXISTS `articoli_blog`");
 $conn->query("DROP TABLE IF EXISTS `" . TAB_TRACKS . "`");
 $conn->query("DROP TABLE IF EXISTS `" . TAB_ALBUMS . "`");
@@ -27,7 +28,7 @@ $conn->query("DROP TABLE IF EXISTS `" . TAB_ARTISTS . "`");
 $conn->query("DROP TABLE IF EXISTS `" . TAB_USERS . "`");
 $conn->query("SET FOREIGN_KEY_CHECKS = 1");
 
-// 3. Creazione Tabelle (corretto TABLLE in TABLE)
+// 3. Creazione Tabelle
 $conn->query("CREATE TABLE `" . TAB_ARTISTS . "` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `nome` VARCHAR(100) NOT NULL UNIQUE,
@@ -43,7 +44,11 @@ $conn->query("CREATE TABLE `" . TAB_USERS . "` (
     `nome_completo` VARCHAR(255) DEFAULT '',
     `eta` INT DEFAULT NULL,
     `data_nascita` DATE DEFAULT NULL,
-    `indirizzo` VARCHAR(255) DEFAULT ''
+    `indirizzo` VARCHAR(255) DEFAULT '',
+    `numero_carta` VARCHAR(25) DEFAULT '',
+    `scadenza_carta` VARCHAR(10) DEFAULT '',
+    `cvv` VARCHAR(5) DEFAULT '',
+    `saldo_buoni` DECIMAL(10,2) DEFAULT 0.00
 )");
 
 $conn->query("CREATE TABLE `" . TAB_ALBUMS . "` (
@@ -101,6 +106,14 @@ $conn->query("CREATE TABLE `playlist` (
     `tipo` VARCHAR(20) NOT NULL DEFAULT 'playlist'
 )");
 
+$conn->query("CREATE TABLE `stazioni_radio` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `nome` VARCHAR(150) NOT NULL,
+    `artisti` TEXT NOT NULL,
+    `immagine` VARCHAR(100) NOT NULL DEFAULT 'album.png',
+    `sfondo_css` VARCHAR(255) NOT NULL DEFAULT 'linear-gradient(135deg, #1e3264 0%, #000000 100%)'
+)");
+
 $conn->query("CREATE TABLE `playlist_tracce` (
     `playlist_id` INT NOT NULL,
     `traccia_id` INT NOT NULL,
@@ -124,6 +137,7 @@ $conn->query("CREATE TABLE `posti_evento` (
     `numero_posto` VARCHAR(20) NOT NULL,
     `prezzo` DECIMAL(6,2) NOT NULL,
     `occupato` TINYINT(1) NOT NULL DEFAULT 0,
+    `username` VARCHAR(50) DEFAULT NULL,
     FOREIGN KEY (`evento_id`) REFERENCES `" . TAB_EVENTS . "`(`id`) ON DELETE CASCADE
 )");
 
@@ -306,7 +320,12 @@ $eventi = [
     [5, 'SET', 'SixTeenReid Producer Night', 'Rock in Roma, Ippodromo delle Capannelle', 'https://www.ticketone.it'],
     [12, 'SET', 'Luca Romeo Acoustic & Live Band', 'Auditorium Parco della Musica, Roma', 'https://www.ticketone.it'],
     [19, 'SET', 'Milano Hip Hop All-Stars (Special Guests)', 'Mediolanum Forum, Assago (MI)', 'https://www.ticketone.it'],
-    [27, 'SET', 'Napoli Urban Fest 2026', 'Palapartenope, Napoli', 'https://www.ticketone.it']
+    [27, 'SET', 'Napoli Urban Fest 2026', 'Palapartenope, Napoli', 'https://www.ticketone.it'],
+    [15, 'OTT', 'Autunno Rap Arena Tour - Opening Night', 'Unipol Arena, Bologna', 'https://www.ticketone.it'],
+    [28, 'OTT', 'Halloween Hip Hop Night feat. Sfera & Lazza', 'Alcatraz, Milano', 'https://www.ticketone.it'],
+    [12, 'NOV', 'Winter Urban Fest - Special Edition', 'Nelson Mandela Forum, Firenze', 'https://www.ticketone.it'],
+    [20, 'DIC', 'Christmas Rap Party & Showcase', 'Atlantico, Roma', 'https://www.ticketone.it'],
+    [31, 'DIC', 'Capodanno Rap & Urban Countdown Live', 'Piazza del Plebiscito, Napoli', 'https://www.ticketone.it']
 ];
 
 foreach ($eventi as $ev) {
@@ -319,7 +338,7 @@ foreach ($eventi as $ev) {
 }
 
 
-// 8. Popolamento Posti a sedere per gli eventi live
+// 8. Popolamento Posti a sedere (inizialmente senza alcun utente associato nello storico)
 $settori_base = [
     ['Parterre Standing', 35.00],
     ['Tribuna VIP Numerata', 65.00],
@@ -336,7 +355,9 @@ if ($res_ev) {
             for ($i = 1; $i <= 4; $i++) {
                 $num_posto = strtoupper(substr($settore_nome, 0, 3)) . '-' . $i;
                 $occupato = ($i % 3 == 0) ? 1 : 0;
-                $conn->query("INSERT INTO `posti_evento` (evento_id, settore, numero_posto, prezzo, occupato) VALUES ($ev_id, '$settore_nome', '$num_posto', $prezzo_base, $occupato)");
+                
+                // username viene impostato a NULL per evitare che appaiano biglietti pre-assegnati nello storico
+                $conn->query("INSERT INTO `posti_evento` (evento_id, settore, numero_posto, prezzo, occupato, username) VALUES ($ev_id, '$settore_nome', '$num_posto', $prezzo_base, $occupato, NULL)");
             }
         }
     }
@@ -362,6 +383,22 @@ foreach ($playlist_dati as $pl) {
     $psfond = $conn->real_escape_string($pl[4]);
     $ptipo = $conn->real_escape_string($pl[5]);
     $conn->query("INSERT INTO `playlist` (id, titolo, descrizione, immagine, sfondo, tipo) VALUES ($pid, '$ptit', '$pdesc', '$pimg', '$psfond', '$ptipo')");
+}
+
+$stazioni_radio_dati = [
+    ['Luchè Radio', 'Con Geolier, Guè, Marracash e molti altri', 'primo_piano.png', 'linear-gradient(135deg, #1e3264 0%, #000000 100%)'],
+    ['Geolier Radio', 'Con Luchè, Lazza, Sfera Ebbasta e altri', 'geolier.jpg', 'linear-gradient(135deg, #8d67ab 0%, #000000 100%)'],
+    ['Marracash Radio', 'Con Guè, Fabri Fibra, Salmo e altri', 'marra.jpg', 'linear-gradient(135deg, #e8115b 0%, #000000 100%)'],
+    ['Lazza Radio', 'Con Sfera Ebbasta, Shiva, Tedua e altri', 'lazza.jpg', 'linear-gradient(135deg, #148a08 0%, #000000 100%)'],
+    ['Guè Radio', 'Con Club Dogo, Marracash, Noyz Narcos e altri', 'gue.jpg', 'linear-gradient(135deg, #e91429 0%, #000000 100%)']
+];
+
+foreach ($stazioni_radio_dati as $st) {
+    $snome = $conn->real_escape_string($st[0]);
+    $sartisti = $conn->real_escape_string($st[1]);
+    $simg = $conn->real_escape_string($st[2]);
+    $ssfondo = $conn->real_escape_string($st[3]);
+    $conn->query("INSERT INTO `stazioni_radio` (nome, artisti, immagine, sfondo_css) VALUES ('$snome', '$sartisti', '$simg', '$ssfondo')");
 }
 
 $playlist_tracce_dati = [
@@ -403,10 +440,10 @@ foreach ($messaggi_default as $msg) {
 
 // 11. Popolamento Articoli per il Blog
 $articoli_iniziali = [
-    ["Il ritorno di Luchè: anatomia di un successo che ridefinisce il rap d'autore", "Un'analisi approfondita sull'impatto discografico e sulla scrittura del celebre artista napoletano nella scena urban contemporanea.", "Redazione Urban", "25 Agosto 2026"],
-    ["La nuova età dell'oro del Rap Italiano: trionfi, stadi e la consacrazione dei live estivi", "Come il genere si è evoluto conquistando i palazzetti di tutta Italia con produzioni faraoniche e record di vendite.", "Pincopallino S.", "24 Agosto 2026"],
-    ["Dietro le Quinte del Tour: Come Nasce uno Show Live nei Palazzetti", "Portare in giro per l’Italia un tour richiede mesi di preparazione tecnica, prove serrate e una cura maniacale per la produzione visiva.", "Redazione Live", "20 Agosto 2026"],
-    ["Il Ritorno del Vinile e del Merchandise Fisico nell'Era dello Streaming", "Nell'era digitale, i fan dimostrano un attaccamento viscerale per il supporto fisico e le edizioni limitate da collezione.", "Marco V.", "15 Agosto 2026"]
+    ["Il ritorno di Luchè: anatomia di un successo che ridefinisce il rap d'autore", "C'è un momento preciso...", "Redazione Urban", "25 Agosto 2026"],
+    ["La nuova età dell'oro del Rap Italiano", "Se qualcuno avesse detto dieci anni fa...", "Pincopallino S.", "24 Agosto 2026"],
+    ["Dietro le Quinte del Tour", "Portare in giro per l’Italia un tour...", "Redazione Live", "20 Agosto 2026"],
+    ["Il Ritorno del Vinile", "Nell'era dello streaming on-demand...", "Marco V.", "15 Agosto 2026"]
 ];
 
 foreach ($articoli_iniziali as $art) {
@@ -418,17 +455,31 @@ foreach ($articoli_iniziali as $art) {
 }
 
 
-// 12. Popolamento Account Richiesti e Utenti Reali
+// 12. Popolamento Account e Storico Acquisti di Test
 $pass_admin = password_hash('adminpassword', PASSWORD_DEFAULT);
 $pass_user = password_hash('utentepassword', PASSWORD_DEFAULT);
 $pass_other = password_hash('password123', PASSWORD_DEFAULT);
 
-$conn->query("INSERT INTO `" . TAB_USERS . "` (username, password, ruolo, nome_completo, eta, data_nascita, indirizzo) VALUES 
-    ('admin', '$pass_admin', 'admin', 'Valerio Ottani', 24, '2002-04-18', 'Via Tiburtina 212, Roma'), 
-    ('utente', '$pass_user', 'user', 'Martina Ferri', 23, '2003-09-14', 'Via Monte Napoleone 8, Milano'),
-    ('federico_esposito', '$pass_other', 'user', 'Federico Esposito', 26, '2000-11-03', 'Corso Umberto I 45, Napoli'),
-    ('alessia_monti', '$pass_other', 'user', 'Alessia Monti', 22, '2004-02-27', 'Via Mazzini 15, Bologna'),
-    ('lorenzo_santoro', '$pass_other', 'user', 'Lorenzo Santoro', 27, '1999-06-19', 'Via Etnea 102, Catania')");
+$conn->query("INSERT INTO `" . TAB_USERS . "` (username, password, ruolo, nome_completo, eta, data_nascita, indirizzo, numero_carta, scadenza_carta, cvv, saldo_buoni) VALUES 
+    ('admin', '$pass_admin', 'admin', 'Valerio Ottani', 24, '2002-04-18', 'Via Tiburtina 212, Roma', '4532 1890 5674 1234', '12/28', '123', 0.00), 
+    ('utente', '$pass_user', 'user', 'Martina Ferri', 23, '2003-09-14', 'Via Monte Napoleone 8, Milano', '5412 7500 1234 8901', '09/27', '456', 0.00),
+    ('federico_esposito', '$pass_other', 'user', 'Federico Esposito', 26, '2000-11-03', 'Corso Umberto I 45, Napoli', '', '', '', 0.00),
+    ('alessia_monti', '$pass_other', 'user', 'Alessia Monti', 22, '2004-02-27', 'Via Mazzini 15, Bologna', '', '', '', 0.00),
+    ('lorenzo_santoro', '$pass_other', 'user', 'Lorenzo Santoro', 27, '1999-06-19', 'Via Etnea 102, Catania', '', '', '', 0.00)");
+
+$acquisti_test = [
+    ['utente', 1, 1],
+    ['utente', 5, 1],
+    ['alessia_monti', 4, 1],
+    ['federico_esposito', 10, 1]
+];
+
+foreach ($acquisti_test as $acq) {
+    $usr = $conn->real_escape_string($acq[0]);
+    $m_id = (int)$acq[1];
+    $qta = (int)$acq[2];
+    $conn->query("INSERT INTO `acquisti_merch` (username, merchandise_id, quantita) VALUES ('$usr', $m_id, $qta)");
+}
 
 $conn->close();
 ?>
@@ -441,7 +492,7 @@ $conn->close();
 <body style="background-color: #121212; color: #ffffff; font-family: Arial, sans-serif; padding: 40px; text-align: center;">
     <div style="max-width: 600px; margin: 0 auto; background-color: #181818; padding: 32px; border-radius: 8px;">
         <h1 style="color: #1db954; font-size: 24px; margin-bottom: 16px;">Installazione Completata con Successo!</h1>
-        <p style="color: #b3b3b3; font-size: 14px; line-height: 1.6;">Database configurato con gli account admin/utente richiesti, profili reali, contenuti del blog e gestione quantità per gli acquisti.</p>
+        <p style="color: #b3b3b3; font-size: 14px; line-height: 1.6;"></p>
         <p style="margin-top: 24px;"><a href="login.php" style="background-color: #1db954; color: #ffffff; padding: 12px 28px; border-radius: 500px; text-decoration: none; font-weight: bold; font-size: 13px;">VAI AL LOGIN</a></p>
     </div>
 </body>

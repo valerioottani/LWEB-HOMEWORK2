@@ -16,21 +16,21 @@ $errore = '';
 // Assicuriamoci che la tabella esista
 $conn->query("CREATE TABLE IF NOT EXISTS `articoli_blog` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `titolo` VARCHAR(255) NOT NULL,
+    `titolo` VARCHAR(255) NOT NULL UNIQUE,
     `contenuto` TEXT NOT NULL,
     `autore` VARCHAR(100) DEFAULT 'Redazione',
     `data` VARCHAR(50) DEFAULT 'Oggi'
 )");
 
-// Controllo rigoroso: se la tabella ha 0 righe, inseriamo i 4 articoli uno ad uno in sicurezza
+// Popolamento iniziale in sicurezza (evitando duplicati con INSERT IGNORE)
 $res_count = $conn->query("SELECT COUNT(*) as cnt FROM `articoli_blog`");
 if ($res_count) {
     $row = $res_count->fetch_assoc();
     if ($row['cnt'] == 0) {
-        $conn->query("INSERT INTO `articoli_blog` (titolo, contenuto, autore, data) VALUES ('Il ritorno di Luchè: anatomia di un successo che ridefinisce il rap d autore', 'Un analisi approfondita sull impatto discografico e sulla scrittura del celebre artista napoletano nella scena urban contemporanea.', 'Redazione Urban', '25 Agosto 2026')");
-        $conn->query("INSERT INTO `articoli_blog` (titolo, contenuto, autore, data) VALUES ('La nuova età dell oro del Rap Italiano: trionfi, stadi e la consacrazione dei live estivi', 'Come il genere si è evoluto conquistando i palazzetti di tutta Italia con produzioni faraoniche e record di vendite.', 'Pincopallino S.', '24 Agosto 2026')");
-        $conn->query("INSERT INTO `articoli_blog` (titolo, contenuto, autore, data) VALUES ('Dietro le Quinte del Tour: Come Nasce uno Show Live nei Palazzetti', 'Portare in giro per l’Italia un tour richiede mesi di preparazione tecnica, prove serrate e una cura maniacale per la produzione visiva.', 'Redazione Live', '20 Agosto 2026')");
-        $conn->query("INSERT INTO `articoli_blog` (titolo, contenuto, autore, data) VALUES ('Il Ritorno del Vinile e del Merchandise Fisico nell Era dello Streaming', 'Nell\'era digitale, i fan dimostrano un attaccamento viscerale per il supporto fisico e le edizioni limitate da collezione.', 'Marco V.', '15 Agosto 2026')");
+        $conn->query("INSERT IGNORE INTO `articoli_blog` (titolo, contenuto, autore, data) VALUES ('Il ritorno di Luchè: anatomia di un successo che ridefinisce il rap d autore', 'Un analisi approfondita sull impatto discografico e sulla scrittura del celebre artista napoletano nella scena urban contemporanea.', 'Redazione Urban', '25 Agosto 2026')");
+        $conn->query("INSERT IGNORE INTO `articoli_blog` (titolo, contenuto, autore, data) VALUES ('La nuova età dell oro del Rap Italiano: trionfi, stadi e la consacrazione dei live estivi', 'Come il genere si è evoluto conquistando i palazzetti di tutta Italia con produzioni faraoniche e record di vendite.', 'Pincopallino S.', '24 Agosto 2026')");
+        $conn->query("INSERT IGNORE INTO `articoli_blog` (titolo, contenuto, autore, data) VALUES ('Dietro le Quinte del Tour: Come Nasce uno Show Live nei Palazzetti', 'Portare in giro per l’Italia un tour richiede mesi di preparazione tecnica, prove serrate e una cura maniacale per la produzione visiva.', 'Redazione Live', '20 Agosto 2026')");
+        $conn->query("INSERT IGNORE INTO `articoli_blog` (titolo, contenuto, autore, data) VALUES ('Il Ritorno del Vinile e del Merchandise Fisico nell Era dello Streaming', 'Nell\'era digitale, i fan dimostrano un attaccamento viscerale per il supporto fisico e le edizioni limitate da collezione.', 'Marco V.', '15 Agosto 2026')");
     }
 }
 
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azione']) && $_POST['
             if ($stmt_ins->execute()) {
                 $messaggio = "Articolo pubblicato con successo!";
             } else {
-                $errore = "Errore durante la pubblicazione dell'articolo.";
+                $errore = "Errore: un articolo con questo titolo esiste già o si è verificato un problema.";
             }
             $stmt_ins->close();
         }
@@ -197,7 +197,6 @@ $res_art = $conn->query("SELECT * FROM `articoli_blog` ORDER BY id DESC");
         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; background-color: #181818; border-radius: 8px; overflow: hidden;">
             <thead>
                 <tr style="border-bottom: 1px solid #333; color: #b3b3b3; font-size: 11px; text-transform: uppercase;">
-                    <th style="padding: 12px;">ID</th>
                     <th style="padding: 12px;">Titolo</th>
                     <th style="padding: 12px;">Autore</th>
                     <th style="padding: 12px;">Contenuto</th>
@@ -213,15 +212,14 @@ $res_art = $conn->query("SELECT * FROM `articoli_blog` ORDER BY id DESC");
                                 <input type="hidden" name="azione" value="modifica" />
                                 <input type="hidden" name="articolo_id" value="<?php echo $art['id']; ?>" />
                                 
-                                <td style="padding: 14px; color: #888;"><?php echo $art['id']; ?></td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="titolo" value="<?php echo htmlspecialchars($art['titolo']); ?>" class="form-input" style="width: 200px; font-weight: bold;" required="required" />
+                                    <input type="text" name="titolo" value="<?php echo htmlspecialchars($art['titolo']); ?>" class="form-input" style="width: 220px; font-weight: bold;" required="required" />
                                 </td>
                                 <td style="padding: 14px;">
                                     <input type="text" name="autore" value="<?php echo htmlspecialchars(isset($art['autore']) ? $art['autore'] : 'Redazione'); ?>" class="form-input" style="width: 130px;" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <textarea name="contenuto" class="form-input" style="width: 300px; height: 50px; resize: vertical;" required="required"><?php echo htmlspecialchars(isset($art['contenuto']) ? $art['contenuto'] : ''); ?></textarea>
+                                    <textarea name="contenuto" class="form-input" style="width: 320px; height: 50px; resize: vertical;" required="required"><?php echo htmlspecialchars(isset($art['contenuto']) ? $art['contenuto'] : ''); ?></textarea>
                                 </td>
                                 <td style="padding: 14px; color: #aaa; white-space: nowrap;"><?php echo htmlspecialchars($art['data']); ?></td>
                                 <td style="padding: 14px; text-align: center; white-space: nowrap;">
@@ -233,7 +231,7 @@ $res_art = $conn->query("SELECT * FROM `articoli_blog` ORDER BY id DESC");
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="6" style="padding: 20px; text-align: center; color: #888;">Nessun articolo trovato nel database.</td>
+                        <td colspan="5" style="padding: 20px; text-align: center; color: #888;">Nessun articolo trovato nel database.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

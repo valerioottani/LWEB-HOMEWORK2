@@ -182,7 +182,6 @@ $res_eventi = $conn->query("SELECT * FROM `" . TAB_EVENTS . "` ORDER BY id ASC")
         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; background-color: #181818; border-radius: 8px; overflow: hidden;">
             <thead>
                 <tr style="border-bottom: 1px solid #333; color: #b3b3b3; font-size: 11px; text-transform: uppercase;">
-                    <th style="padding: 12px;">ID</th>
                     <th style="padding: 12px;">Giorno</th>
                     <th style="padding: 12px;">Mese</th>
                     <th style="padding: 12px;">Titolo / Artista</th>
@@ -198,7 +197,6 @@ $res_eventi = $conn->query("SELECT * FROM `" . TAB_EVENTS . "` ORDER BY id ASC")
                                 <input type="hidden" name="azione" value="modifica" />
                                 <input type="hidden" name="evento_id" value="<?php echo $ev['id']; ?>" />
                                 
-                                <td style="padding: 14px; color: #888;"><?php echo $ev['id']; ?></td>
                                 <td style="padding: 14px;">
                                     <input type="text" name="giorno" value="<?php echo htmlspecialchars($ev['giorno']); ?>" class="form-input" style="width: 60px; font-weight: bold; text-align: center;" required="required" />
                                 </td>
@@ -206,10 +204,10 @@ $res_eventi = $conn->query("SELECT * FROM `" . TAB_EVENTS . "` ORDER BY id ASC")
                                     <input type="text" name="mese" value="<?php echo htmlspecialchars($ev['mese']); ?>" class="form-input" style="width: 70px; text-transform: uppercase; text-align: center;" required="required" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="titolo" value="<?php echo htmlspecialchars($ev['titolo']); ?>" class="form-input" style="width: 220px; font-weight: bold;" required="required" />
+                                    <input type="text" name="titolo" value="<?php echo htmlspecialchars($ev['titolo']); ?>" class="form-input" style="width: 250px; font-weight: bold;" required="required" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="luogo" value="<?php echo htmlspecialchars($ev['luogo']); ?>" class="form-input" style="width: 280px;" />
+                                    <input type="text" name="luogo" value="<?php echo htmlspecialchars($ev['luogo']); ?>" class="form-input" style="width: 320px;" />
                                 </td>
                                 <td style="padding: 14px; text-align: center; white-space: nowrap;">
                                     <button type="submit" class="btn-green" style="padding: 6px 14px; margin-right: 6px;">Salva</button>
@@ -220,7 +218,7 @@ $res_eventi = $conn->query("SELECT * FROM `" . TAB_EVENTS . "` ORDER BY id ASC")
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="6" style="padding: 20px; text-align: center; color: #888;">Nessun evento trovato nel database.</td>
+                        <td colspan="5" style="padding: 20px; text-align: center; color: #888;">Nessun evento trovato nel database.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

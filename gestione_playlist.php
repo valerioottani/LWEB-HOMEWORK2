@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azione']) && $_POST['
     $titolo = trim($_POST['titolo']);
     $descrizione = trim($_POST['descrizione']);
     $immagine = trim($_POST['immagine']);
-    $sfondo = trim($_POST['sfondo']);
+    $sfondo = 'linear-gradient(135deg, #1e3264 0%, #000000 100%)'; // Sfondo predefinito di default
     $tipo = 'playlist'; // Forzato sempre a playlist
 
     if (!empty($titolo)) {
@@ -58,13 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azione']) && $_POST['
     $titolo = trim($_POST['titolo']);
     $descrizione = trim($_POST['descrizione']);
     $immagine = trim($_POST['immagine']);
-    $sfondo = trim($_POST['sfondo']);
     $tipo = 'playlist'; // Forzato sempre a playlist
 
     if (!empty($titolo)) {
-        $stmt_upd = $conn->prepare("UPDATE `playlist` SET titolo = ?, descrizione = ?, immagine = ?, sfondo = ?, tipo = ? WHERE id = ?");
+        $stmt_upd = $conn->prepare("UPDATE `playlist` SET titolo = ?, descrizione = ?, immagine = ?, tipo = ? WHERE id = ?");
         if ($stmt_upd) {
-            $stmt_upd->bind_param("sssssi", $titolo, $descrizione, $immagine, $sfondo, $tipo, $id_mod);
+            $stmt_upd->bind_param("ssssi", $titolo, $descrizione, $immagine, $tipo, $id_mod);
             if ($stmt_upd->execute()) {
                 $messaggio = "Playlist aggiornata con successo!";
             } else {
@@ -165,10 +164,6 @@ $res_playlist = $conn->query("SELECT * FROM `playlist` ORDER BY id ASC");
                     <input type="text" name="immagine" value="primo_piano.png" class="form-input" />
                 </div>
                 <div>
-                    <label style="font-size: 11px; color: #b3b3b3; display: block; margin-bottom: 4px;">Sfondo CSS</label>
-                    <input type="text" name="sfondo" value="linear-gradient(135deg, #1e3264 0%, #000000 100%)" class="form-input" />
-                </div>
-                <div>
                     <button type="submit" class="btn-green">Crea Playlist</button>
                 </div>
             </form>
@@ -179,7 +174,6 @@ $res_playlist = $conn->query("SELECT * FROM `playlist` ORDER BY id ASC");
         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; background-color: #181818; border-radius: 8px; overflow: hidden;">
             <thead>
                 <tr style="border-bottom: 1px solid #333; color: #b3b3b3; font-size: 11px; text-transform: uppercase;">
-                    <th style="padding: 12px;">ID</th>
                     <th style="padding: 12px;">Titolo</th>
                     <th style="padding: 12px;">Descrizione</th>
                     <th style="padding: 12px;">Immagine</th>
@@ -193,17 +187,15 @@ $res_playlist = $conn->query("SELECT * FROM `playlist` ORDER BY id ASC");
                             <form action="gestione_playlist.php" method="POST">
                                 <input type="hidden" name="azione" value="modifica" />
                                 <input type="hidden" name="playlist_id" value="<?php echo $pl['id']; ?>" />
-                                <input type="hidden" name="sfondo" value="<?php echo htmlspecialchars($pl['sfondo']); ?>" />
                                 
-                                <td style="padding: 14px; color: #888;"><?php echo $pl['id']; ?></td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="titolo" value="<?php echo htmlspecialchars($pl['titolo']); ?>" class="form-input" style="width: 150px; font-weight: bold;" required="required" />
+                                    <input type="text" name="titolo" value="<?php echo htmlspecialchars($pl['titolo']); ?>" class="form-input" style="width: 180px; font-weight: bold;" required="required" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="descrizione" value="<?php echo htmlspecialchars($pl['descrizione']); ?>" class="form-input" style="width: 300px;" />
+                                    <input type="text" name="descrizione" value="<?php echo htmlspecialchars($pl['descrizione']); ?>" class="form-input" style="width: 400px;" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="immagine" value="<?php echo htmlspecialchars($pl['immagine']); ?>" class="form-input" style="width: 130px;" />
+                                    <input type="text" name="immagine" value="<?php echo htmlspecialchars($pl['immagine']); ?>" class="form-input" style="width: 150px;" />
                                 </td>
                                 <td style="padding: 14px; text-align: center; white-space: nowrap;">
                                     <button type="submit" class="btn-green" style="padding: 6px 14px; margin-right: 6px;">Salva</button>
@@ -214,7 +206,7 @@ $res_playlist = $conn->query("SELECT * FROM `playlist` ORDER BY id ASC");
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="5" style="padding: 20px; text-align: center; color: #888;">Nessuna playlist trovata.</td>
+                        <td colspan="4" style="padding: 20px; text-align: center; color: #888;">Nessuna playlist trovata.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

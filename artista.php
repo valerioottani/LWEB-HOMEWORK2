@@ -5,7 +5,7 @@ require_once 'connection.php';
 $id_artista = isset($_GET['id']) ? (int)$_GET['id'] : 1;
 $is_admin = (isset($_SESSION['ruolo']) && $_SESSION['ruolo'] === 'admin');
 
-// Gestione eliminazione brano (lato admin)
+// Gestisce la richiesta dell'amministratore per eliminare un brano specifico dal database
 if ($is_admin && isset($_GET['del_brano'])) {
     $id_brano = (int)$_GET['del_brano'];
     $stmt_del = $conn->prepare("DELETE FROM `" . TAB_TRACKS . "` WHERE id = ?");
@@ -16,7 +16,7 @@ if ($is_admin && isset($_GET['del_brano'])) {
     exit();
 }
 
-// Recupero dati artista
+// Recupera le informazioni anagrafiche e biografiche dell'artista selezionato
 $stmt = $conn->prepare("SELECT * FROM `" . TAB_ARTISTS . "` WHERE id = ?");
 $stmt->bind_param('i', $id_artista);
 $stmt->execute();
@@ -29,7 +29,7 @@ if ($res_artista->num_rows === 0) {
 $artista = $res_artista->fetch_assoc();
 $stmt->close();
 
-// Recupero brani
+// Estrae l'elenco dei brani musicali associati all'artista uniti ai rispettivi album di appartenenza
 $sql_brani = "SELECT t.id AS track_id, t.titolo, t.durata, t.immagine_brano, a.titolo AS album_nome 
               FROM `" . TAB_TRACKS . "` t 
               JOIN `" . TAB_ALBUMS . "` a ON t.album_id = a.id 

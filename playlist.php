@@ -65,18 +65,6 @@ $res_brani = $conn->query("SELECT t.titolo AS brano, t.durata, t.immagine_brano,
             transform: scale(1.06);
             background-color: #1ed760;
         }
-        .spotify-action-icon {
-            background: transparent;
-            border: none;
-            color: #b3b3b3;
-            font-size: 24px;
-            cursor: default;
-            transition: color 0.2s ease, transform 0.2s ease;
-        }
-        .spotify-action-icon:hover {
-            color: #ffffff;
-            transform: scale(1.1);
-        }
         .admin-link-btn {
             background-color: #1db954;
             color: #000000;
@@ -105,7 +93,7 @@ $res_brani = $conn->query("SELECT t.titolo AS brano, t.durata, t.immagine_brano,
                 <img src="img/<?php echo htmlspecialchars($playlist_corrente['immagine']); ?>" alt="" style="width: 160px; height: 160px; border-radius: 6px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.6);" />
                 <div>
                     <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #1db954;">Playlist Pubblica</span>
-                    <h1 style="font-size: 38px; font-weight: 900; margin: 8px 0;"><?php echo htmlspecialchars($playlist_corrente['titolo']); ?></h1>
+                    <h1 style="font-size: 32px; font-weight: bold; margin: 8px 0; letter-spacing: -0.5px;"><?php echo htmlspecialchars($playlist_corrente['titolo']); ?></h1>
                     <p style="color: #b3b3b3; font-size: 14px; margin: 0;"><?php echo htmlspecialchars($playlist_corrente['descrizione']); ?></p>
                 </div>
             </div>
@@ -117,11 +105,9 @@ $res_brani = $conn->query("SELECT t.titolo AS brano, t.durata, t.immagine_brano,
             <?php endif; ?>
         </div>
 
-        <!-- BARRA COMANDI -->
+        <!-- BARRA COMANDI (Solo Play) -->
         <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 32px;">
             <button class="spotify-play-btn" title="Riproduci">▶</button>
-            <button class="spotify-action-icon" title="Attiva sequenza casuale">🔀</button>
-            <button class="spotify-action-icon" title="Salva nella libreria">♡</button>
         </div>
 
         <!-- Elenco Brani -->
@@ -133,8 +119,8 @@ $res_brani = $conn->query("SELECT t.titolo AS brano, t.durata, t.immagine_brano,
                         <div style="display: flex; align-items: center; gap: 16px;">
                             <img src="img/<?php echo htmlspecialchars($traccia['immagine_brano']); ?>" alt="" style="width: 45px; height: 45px; border-radius: 4px; object-fit: cover;" />
                             <div>
-                                <p style="font-size: 14px; font-weight: bold; margin: 0 0 4px 0;"><?php echo htmlspecialchars($traccia['brano']); ?></p>
-                                <p style="color: #b3b3b3; font-size: 12px; margin: 0;"><?php echo htmlspecialchars($traccia['artista']); ?> • <?php echo htmlspecialchars($traccia['album']); ?></p>
+                                <p style="font-size: 15px; font-weight: 500; margin: 0 0 4px 0; color: #ffffff;"><?php echo htmlspecialchars($traccia['brano']); ?></p>
+                                <p style="color: #b3b3b3; font-size: 13px; margin: 0;"><?php echo htmlspecialchars($traccia['artista']); ?> • <?php echo htmlspecialchars($traccia['album']); ?></p>
                             </div>
                         </div>
                         <div style="color: #b3b3b3; font-size: 13px;">
@@ -147,6 +133,7 @@ $res_brani = $conn->query("SELECT t.titolo AS brano, t.durata, t.immagine_brano,
             <?php endif; ?>
         </div>
 
+        <!-- Link di ritorno alla Homepage -->
         <div style="margin-top: 30px;">
             <a href="homepage.php" style="color: #1db954; text-decoration: none; font-size: 13px; font-weight: bold; cursor: pointer;">← Torna alla Homepage</a>
         </div>

@@ -4,8 +4,12 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once 'connection.php';
 
-// Controllo di accesso: solo gli admin possono accedere
-if (!isset($_SESSION['user']) || !isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
+$is_logged = isset($_SESSION['user']);
+$username_corrente = $is_logged ? $_SESSION['user'] : '';
+$ruolo = isset($_SESSION['ruolo']) ? $_SESSION['ruolo'] : '';
+
+// Controllo di accesso: solo gli admin possono accedere a questa pagina di gestione
+if (!isset($_SESSION['user']) || $ruolo !== 'admin') {
     header('Location: homepage.php');
     exit();
 }
@@ -80,14 +84,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azione']) && $_POST['
     }
 }
 
-// Recupero di tutti gli album con i relativi artisti
+// 4. RECUPERO DATI PER IL FILTRO STORICO ACQUISTI UTENTI (Lato Admin)
+$res_lista_utenti = $conn->query("SELECT username, nome_completo FROM `" . TAB_USERS . "` WHERE ruolo != 'admin' ORDER BY username ASC");
+$utente_selezionato = isset($_GET['filtro_utente']) ? trim($_GET['filtro_utente']) : '';
+
+$res_acquisti = null;
+if (!empty($utente_selezionato)) {
+    $stmt_acq = $conn->prepare("SELECT acq.data_acquisto, m.tipo_prodotto, m.prezzo, m.immagine_prodotto, alb.titolo AS album_titolo, acq.username 
+                                FROM `acquisti_merch` acq 
+                                JOIN `merchandise_album` m ON acq.merchandise_id = m.id 
+                                JOIN `" . TAB_ALBUMS . "` alb ON m.album_id = alb.id 
+                                WHERE acq.username = ? 
+                                ORDER BY acq.data_acquisto DESC");
+    if ($stmt_acq) {
+        $stmt_acq->bind_param("s", $utente_selezionato);
+        $stmt_acq->execute();
+        $res_acquisti = $stmt_acq->get_result();
+        $stmt_acq->close();
+    }
+}
+
+// Recupero di tutti gli album con i relativi artisti per la tabella di gestione
 $res_albums = $conn->query("SELECT a.*, art.nome AS artista FROM `" . TAB_ALBUMS . "` a JOIN `" . TAB_ARTISTS . "` art ON a.artista_id = art.id ORDER BY a.id ASC");
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="it" lang="it">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>Spotify - Gestione Discografia</title>
+    <title>Spotify - Gestione Discografia e Storico Utenti</title>
     <style type="text/css">
         .form-input {
             background-color: #181818;
@@ -125,6 +149,16 @@ $res_albums = $conn->query("SELECT a.*, art.nome AS artista FROM `" . TAB_ALBUMS
         .btn-red:hover {
             background-color: #ff334b;
         }
+        .acq-row {
+            transition: background-color 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .acq-row:hover {
+            background-color: #2a2a2a !important;
+            transform: scale(1.01);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+            position: relative;
+            z-index: 2;
+        }
     </style>
 </head>
 <body style="background: linear-gradient(180deg, #1f1f1f 0%, #121212 40%, #0a0a0a 100%); background-attachment: fixed; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; min-height: 100vh;">
@@ -134,7 +168,7 @@ $res_albums = $conn->query("SELECT a.*, art.nome AS artista FROM `" . TAB_ALBUMS
     <div style="margin-left: 230px; padding: 32px; max-width: 1450px; box-sizing: border-box;">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <h1 style="font-size: 24px; font-weight: bold; margin: 0;">Gestione Discografia (Album e Note di Produzione)</h1>
+            <h1 style="font-size: 24px; font-weight: bold; margin: 0;">Gestione Discografia (Album e Storico Utenti)</h1>
             <a href="homepage.php" style="color: #1db954; text-decoration: none; font-size: 13px; font-weight: bold;">← Torna alla Homepage</a>
         </div>
 
@@ -195,12 +229,11 @@ $res_albums = $conn->query("SELECT a.*, art.nome AS artista FROM `" . TAB_ALBUMS
             </form>
         </div>
 
-        <!-- TABELLA DI GESTIONE / MODIFICA ED ELIMINAZIONE -->
+        <!-- TABELLA DI GESTIONE / MODIFICA ED ELIMINAZIONE ALBUM -->
         <h3 style="font-size: 18px; margin-bottom: 16px;">Album Esistenti nel Catalogo</h3>
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; background-color: #181818; border-radius: 8px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; background-color: #181818; border-radius: 8px; overflow: hidden; margin-bottom: 40px;">
             <thead>
                 <tr style="border-bottom: 1px solid #333; color: #b3b3b3; font-size: 11px; text-transform: uppercase;">
-                    <th style="padding: 12px;">ID</th>
                     <th style="padding: 12px;">Titolo Album</th>
                     <th style="padding: 12px;">Artista</th>
                     <th style="padding: 12px;">Anno</th>
@@ -217,12 +250,11 @@ $res_albums = $conn->query("SELECT a.*, art.nome AS artista FROM `" . TAB_ALBUMS
                                 <input type="hidden" name="azione" value="modifica" />
                                 <input type="hidden" name="album_id" value="<?php echo $alb['id']; ?>" />
                                 
-                                <td style="padding: 14px; color: #888;"><?php echo $alb['id']; ?></td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="titolo" value="<?php echo htmlspecialchars($alb['titolo']); ?>" class="form-input" style="width: 140px; font-weight: bold;" required="required" />
+                                    <input type="text" name="titolo" value="<?php echo htmlspecialchars($alb['titolo']); ?>" class="form-input" style="width: 160px; font-weight: bold;" required="required" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <select name="artista_id" class="form-input" style="width: 130px;" required="required">
+                                    <select name="artista_id" class="form-input" style="width: 140px;" required="required">
                                         <?php 
                                         $res_art_loop = $conn->query("SELECT id, nome FROM `" . TAB_ARTISTS . "` ORDER BY nome ASC");
                                         while ($art_l = $res_art_loop->fetch_assoc()) {
@@ -236,10 +268,10 @@ $res_albums = $conn->query("SELECT a.*, art.nome AS artista FROM `" . TAB_ALBUMS
                                     <input type="number" name="anno" value="<?php echo htmlspecialchars($alb['anno']); ?>" class="form-input" style="width: 70px;" required="required" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="curiosita" value="<?php echo htmlspecialchars(isset($alb['curiosita']) ? $alb['curiosita'] : ''); ?>" class="form-input" style="width: 280px;" />
+                                    <input type="text" name="curiosita" value="<?php echo htmlspecialchars(isset($alb['curiosita']) ? $alb['curiosita'] : ''); ?>" class="form-input" style="width: 320px;" />
                                 </td>
                                 <td style="padding: 14px;">
-                                    <input type="text" name="copertina" value="<?php echo htmlspecialchars($alb['copertina']); ?>" class="form-input" style="width: 100px;" />
+                                    <input type="text" name="copertina" value="<?php echo htmlspecialchars($alb['copertina']); ?>" class="form-input" style="width: 120px;" />
                                 </td>
                                 <td style="padding: 14px; text-align: center; white-space: nowrap;">
                                     <button type="submit" class="btn-green" style="padding: 6px 14px; margin-right: 6px;">Salva</button>
@@ -250,11 +282,66 @@ $res_albums = $conn->query("SELECT a.*, art.nome AS artista FROM `" . TAB_ALBUMS
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="7" style="padding: 20px; text-align: center; color: #888;">Nessun album trovato nella discografia.</td>
+                        <td colspan="6" style="padding: 20px; text-align: center; color: #888;">Nessun album trovato nella discografia.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
         </table>
+
+        <!-- SEZIONE FILTRAGGIO STORICO ACQUISTI UTENTI (LATO ADMIN) -->
+        <div style="background-color: #181818; padding: 24px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 40px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                <h3 style="font-size: 18px; font-weight: bold; margin: 0; color: #ffffff;">📦 Storico Acquisti Merchandise per Utente</h3>
+
+                <form action="gestione_discografia.php" method="GET" style="display: flex; gap: 10px; align-items: center;">
+                    <label style="font-size: 12px; color: #b3b3b3; font-weight: bold;">Seleziona Utente:</label>
+                    <select name="filtro_utente" class="form-input" onchange="this.form.submit()">
+                        <option value="">-- Scegli utente --</option>
+                        <?php if ($res_lista_utenti): ?>
+                            <?php while ($u = $res_lista_utenti->fetch_assoc()): ?>
+                                <option value="<?php echo htmlspecialchars($u['username']); ?>" <?php if ($utente_selezionato === $u['username']) echo 'selected="selected"'; ?>>
+                                    <?php echo htmlspecialchars($u['username'] . ($u['nome_completo'] ? ' (' . $u['nome_completo'] . ')' : '')); ?>
+                                </option>
+                            <?php endwhile; ?>
+                        <?php endif; ?>
+                    </select>
+                    <?php if (!empty($utente_selezionato)): ?>
+                        <a href="gestione_discografia.php" style="color: #1db954; text-decoration: none; font-size: 12px; font-weight: bold; margin-left: 5px;">Reset Filtro</a>
+                    <?php endif; ?>
+                </form>
+            </div>
+
+            <?php if (empty($utente_selezionato)): ?>
+                <p style="color: #b3b3b3; font-size: 14px; margin: 0; text-align: center; padding: 15px;">Seleziona un utente dal menu a tendina per visualizzare gli acquisti effettuati.</p>
+            <?php elseif ($res_acquisti && $res_acquisti->num_rows > 0): ?>
+                <table style="width: 100%; border-collapse: separate; border-spacing: 0 6px; text-align: left; font-size: 14px;">
+                    <thead>
+                        <tr style="color: #b3b3b3; font-size: 11px; text-transform: uppercase;">
+                            <th style="padding: 10px; width: 60px;">Prodotto</th>
+                            <th style="padding: 10px;">Articolo / Tipologia</th>
+                            <th style="padding: 10px;">Album Collegato</th>
+                            <th style="padding: 10px;">Data Ordine</th>
+                            <th style="padding: 10px; text-align: right;">Prezzo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while ($acq = $res_acquisti->fetch_assoc()): ?>
+                            <tr class="acq-row" style="background-color: #202020; border-radius: 6px;">
+                                <td style="padding: 12px 10px; border-top-left-radius: 6px; border-bottom-left-radius: 6px;">
+                                    <img src="img/<?php echo htmlspecialchars($acq['immagine_prodotto']); ?>" alt="" style="width: 40px; height: 40px; border-radius: 4px; object-fit: contain; background-color: #222;" />
+                                </td>
+                                <td style="padding: 12px 10px; font-weight: bold; color: #ffffff;"><?php echo htmlspecialchars($acq['tipo_prodotto']); ?></td>
+                                <td style="padding: 12px 10px; color: #b3b3b3;"><?php echo htmlspecialchars($acq['album_titolo']); ?></td>
+                                <td style="padding: 12px 10px; color: #888888; font-size: 13px;"><?php echo htmlspecialchars($acq['data_acquisto']); ?></td>
+                                <td style="padding: 12px 10px; text-align: right; font-weight: bold; color: #1db954; border-top-right-radius: 6px; border-bottom-right-radius: 6px;">€ <?php echo number_format($acq['prezzo'], 2, ',', '.'); ?></td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p style="color: #b3b3b3; font-size: 14px; margin: 0; text-align: center; padding: 15px;">Nessun acquisto di merchandise trovato per l'utente <strong style="color: #1db954;"><?php echo htmlspecialchars($utente_selezionato); ?></strong>.</p>
+            <?php endif; ?>
+        </div>
 
     </div>
 

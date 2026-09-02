@@ -7,7 +7,7 @@ require_once 'connection.php';
 $is_logged = isset($_SESSION['user']);
 $ruolo = isset($_SESSION['ruolo']) ? $_SESSION['ruolo'] : '';
 
-// Recupero di tutti gli artisti dal database
+// Esegue una query per prelevare l'elenco completo di tutti gli artisti ordinati per ID
 $res_artists = $conn->query("SELECT * FROM `" . TAB_ARTISTS . "` ORDER BY id ASC");
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">

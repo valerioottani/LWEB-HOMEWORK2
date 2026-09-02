@@ -7,7 +7,7 @@ require_once 'connection.php';
 $is_logged = isset($_SESSION['user']);
 $ruolo = isset($_SESSION['ruolo']) ? $_SESSION['ruolo'] : '';
 
-// Controllo se ci sono articoli nel database, altrimenti usiamo la lista mista (originali + nuovi)
+// Verifica la presenza della tabella e preleva tutti gli articoli del blog ordinati per ID decrescente
 $articoli_db = [];
 $check_tab = $conn->query("SHOW TABLES LIKE 'articoli_blog'");
 if ($check_tab && $check_tab->num_rows > 0) {
@@ -19,29 +19,25 @@ if ($check_tab && $check_tab->num_rows > 0) {
     }
 }
 
-// Se il DB è vuoto, mostriamo i due originali + i due nuovi richiesti
+// Inizializza un array di articoli predefiniti di fallback nel caso in cui il database sia vuoto o non disponibile
 if (empty($articoli_db)) {
     $articoli_db = [
         [
-            'id' => 1,
             'titolo' => "Il ritorno di Luchè: anatomia di un successo che ridefinisce il rap d'autore",
             'autore' => 'Redazione Urban',
             'data' => '25 Agosto 2026'
         ],
         [
-            'id' => 2,
             'titolo' => "La nuova età dell'oro del Rap Italiano: trionfi, stadi e la consacrazione dei live estivi",
             'autore' => 'Pincopallino S.',
             'data' => '24 Agosto 2026'
         ],
         [
-            'id' => 3,
             'titolo' => "Dietro le Quinte del Tour: Come Nasce uno Show Live nei Palazzetti",
             'autore' => 'Redazione Live',
             'data' => '20 Agosto 2026'
         ],
         [
-            'id' => 4,
             'titolo' => "Il Ritorno del Vinile e del Merchandise Fisico nell'Era dello Streaming",
             'autore' => 'Marco V.',
             'data' => '15 Agosto 2026'
@@ -107,7 +103,7 @@ if (empty($articoli_db)) {
             </div>
             <div style="display: flex; flex-direction: column; gap: 14px;">
                 <?php foreach ($articoli_db as $post): ?>
-                    <a href="articolo.php?id=<?php echo $post['id']; ?>" style="text-decoration: none; color: inherit;">
+                    <a href="articolo.php?titolo=<?php echo urlencode($post['titolo']); ?>" style="text-decoration: none; color: inherit;">
                         <div class="blog-post-card">
                             <p style="font-size: 15px; font-weight: bold; margin: 0 0 6px 0; color: #ffffff; line-height: 1.3;"><?php echo htmlspecialchars($post['titolo']); ?></p>
                             <div style="display: flex; justify-content: space-between; align-items: center;">

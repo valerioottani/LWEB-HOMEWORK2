@@ -96,12 +96,10 @@ $res_eventi = $conn->query("SELECT * FROM `" . TAB_EVENTS . "` ORDER BY id ASC")
 
     <?php include 'menu.php'; ?>
 
-    <!-- Contenitore principale con compensazione menu laterale e centratura interna -->
     <div style="margin-left: 230px; padding: 40px 24px; box-sizing: border-box;">
         
         <div style="max-width: 850px; margin: 0 auto;">
             
-            <!-- Intestazione con titolo e pulsante admin per la gestione eventi -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <div>
                     <h1 style="font-size: 32px; font-weight: 900; margin: 0 0 8px 0; letter-spacing: -1px;">Eventi & Tour Live</h1>
@@ -127,16 +125,36 @@ $res_eventi = $conn->query("SELECT * FROM `" . TAB_EVENTS . "` ORDER BY id ASC")
             <div style="display: flex; flex-direction: column; gap: 16px;">
                 <?php 
                 $Trovati = 0;
+                $data_oggi = new DateTime('2026-09-02');
+
+                $mappa_mesi = [
+                    'GEN' => '01', 'FEB' => '02', 'MAR' => '03', 'APR' => '04',
+                    'MAG' => '05', 'GIU' => '06', 'LUG' => '07', 'AGO' => '08',
+                    'SET' => '09', 'OTT' => '10', 'NOV' => '11', 'DIC' => '12'
+                ];
+
                 if ($res_eventi && $res_eventi->num_rows > 0): 
                     while ($ev = $res_eventi->fetch_assoc()):
-                        // Determinazione dello stato dell'evento in base all'ID (per scopi dimostrativi dei filtri)
-                        $is_passato = ($ev['id'] <= 3);
-                        $is_futuro = ($ev['id'] > 7);
-                        $is_programma = (!$is_passato && !$is_futuro);
+                        $giorno_num = str_pad($ev['giorno'], 2, '0', STR_PAD_LEFT);
+                        $mese_str = strtoupper(trim($ev['mese']));
+                        $mese_num = isset($mappa_mesi[$mese_str]) ? $mappa_mesi[$mese_str] : '09';
+                        
+                        $data_evento_str = "2026-" . $mese_num . "-" . $giorno_num;
+                        $data_evento = DateTime::createFromFormat('Y-m-d', $data_evento_str);
+
+                        if (!$data_evento) {
+                            $data_evento = $data_oggi;
+                        }
+
+                        $differenza_giorni = (int)$data_oggi->diff($data_evento)->format('%r%a');
+
+                        $is_passato = ($data_evento < $data_oggi);
+                        $is_futuri_lontani = ($differenza_giorni > 30);
+                        $is_programma = (!$is_passato && !$is_futuri_lontani);
 
                         $mostra = true;
                         if ($filtro === 'passati' && !$is_passato) { $mostra = false; }
-                        if ($filtro === 'futuri' && !$is_futuro) { $mostra = false; }
+                        if ($filtro === 'futuri' && !$is_futuri_lontani) { $mostra = false; }
                         if ($filtro === 'programma' && !$is_programma) { $mostra = false; }
                         
                         if ($mostra):
@@ -156,7 +174,7 @@ $res_eventi = $conn->query("SELECT * FROM `" . TAB_EVENTS . "` ORDER BY id ASC")
                             <div>
                                 <?php if ($is_passato): ?>
                                     <div class="disabled-btn">Evento Concluso</div>
-                                <?php elseif ($is_futuro): ?>
+                                <?php elseif ($is_futuri_lontani): ?>
                                     <div class="disabled-btn" style="background-color: #222; color: #1db954; border: 1px dashed #1db954;">Disponibilità in Arrivo</div>
                                 <?php else: ?>
                                     <a href="prenota_evento.php?id=<?php echo $ev['id']; ?>" class="book-btn">Scegli Posto & Acquista</a>

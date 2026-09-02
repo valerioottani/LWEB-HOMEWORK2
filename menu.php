@@ -43,13 +43,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </ul>
         </div>
 
-        <!-- SEZIONE PROFILO -->
+ <!-- SEZIONE PROFILO -->
         <?php if ($is_logged): ?>
             <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #282828;">
                 <p style="font-size: 10px; text-transform: uppercase; color: #888888; font-weight: bold; margin: 0 0 10px 0; letter-spacing: 1px;">Profilo</p>
                 <ul style="list-style: none; margin: 0; padding: 0;">
                     <li style="margin-bottom: 14px;">
                         <a href="profilo.php" style="color: <?php echo ($current_page === 'profilo.php') ? '#1db954' : '#b3b3b3'; ?>; text-decoration: none; font-size: 13px; font-weight: bold;">Il Mio Profilo</a>
+                    </li>
+                    <li style="margin-bottom: 14px;">
+                        <a href="storico_acquisti.php" style="color: <?php echo ($current_page === 'storico_acquisti.php') ? '#1db954' : '#b3b3b3'; ?>; text-decoration: none; font-size: 13px; font-weight: bold;">Storico Acquisti</a>
                     </li>
                     <?php if ($ruolo === 'admin'): ?>
                         <li style="margin-bottom: 14px;">
