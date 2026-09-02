@@ -30,6 +30,10 @@ Il progetto include uno script di auto-configurazione per il server. Eseguendo n
 * **Utente Standard:**
   - Username: `utente`
   - Password: `utentepassword`
+* **CVV carta credito Utente:**
+  - Cvv: `456`
+* **CVV carta credito Admin:**
+  - Cvv: `123` 
 
 ## Organizzazione del Sito e Sezioni Principali
 L'homework è suddiviso nelle seguenti sezioni navigabili:
