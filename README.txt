@@ -6,8 +6,8 @@ Questo homework consiste nell'evoluzione del precedente progetto statico in un'a
 * Valerio Ottani 
 * Giovanni La Penna
 * Indirizzi repository GitHub:
-  - https://github.com/valerioottani/LWEB-HOMEWORK1.git
-  - https://github.com/Giogiogabbana/LWEB-HOMEWORK1.git
+  - https://github.com/valerioottani/LWEB-HOMEWORK2.git
+  - https://github.com/Giogiogabbana/LWEB-HOMEWORK2.git
 
 ## Architettura Tecnologica e Tecniche Utilizzate
 L'applicazione è stata sviluppata implementando le seguenti tecnologie e metodologie:
